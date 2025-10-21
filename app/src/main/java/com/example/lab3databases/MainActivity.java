@@ -2,6 +2,7 @@ package com.example.lab3databases;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.annotation.SuppressLint;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.view.View;
@@ -65,17 +66,85 @@ public class MainActivity extends AppCompatActivity {
         });
 
         findBtn.setOnClickListener(new View.OnClickListener() {
+            @SuppressLint("SetTextI18n")
             @Override
             public void onClick(View v) {
-                Toast.makeText(MainActivity.this, "Find product", Toast.LENGTH_SHORT).show();
+                String name = productName.getText().toString().trim();
+                String priceText = productPrice.getText().toString().trim();
+
+                double price = -1; // Use -1 to indicate no price provided
+
+                // Parse price if available
+                if (!priceText.isEmpty()) {
+                    try {
+                        price = Double.parseDouble(priceText);
+                    } catch (NumberFormatException e) {
+                        Toast.makeText(MainActivity.this, "Please enter a valid price", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                }
+
+                // Check if at least one search criteria is provided
+                if (name.isEmpty() && priceText.isEmpty()) {
+                    Toast.makeText(MainActivity.this, "Please enter either name, price, or both to search", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                Product product = dbHandler.findProduct(name, price);
+
+                if (product != null) {
+                    // Product found - display its details
+                    productId.setText(String.valueOf(product.getId()));
+                    productName.setText(product.getProductName());
+                    productPrice.setText(String.valueOf(product.getProductPrice()));
+
+                    // Show which search was performed
+                    if (!name.isEmpty() && price >= 0) {
+                        Toast.makeText(MainActivity.this, "Product found by name and price!", Toast.LENGTH_SHORT).show();
+                    } else if (!name.isEmpty()) {
+                        Toast.makeText(MainActivity.this, "Product found by name!", Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(MainActivity.this, "Product found by price!", Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    // Product not found
+                    productId.setText("Not Found");
+                    Toast.makeText(MainActivity.this, "Product not found", Toast.LENGTH_SHORT).show();
+                }
             }
         });
 
         deleteBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                String name = productName.getText().toString().trim();
+                String priceText = productPrice.getText().toString().trim();
 
-                Toast.makeText(MainActivity.this, "Delete product", Toast.LENGTH_SHORT).show();
+                // Check if both fields are provided
+                if (name.isEmpty() || priceText.isEmpty()) {
+                    Toast.makeText(MainActivity.this, "Please enter both product name AND price to delete", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                try {
+                    double price = Double.parseDouble(priceText);
+
+                    // Delete the product with both name and price
+                    dbHandler.deleteProduct(name, price);
+
+                    // Clear the input fields
+                    productId.setText("");
+                    productName.setText("");
+                    productPrice.setText("");
+
+                    Toast.makeText(MainActivity.this, "Product deleted (name: " + name + ", price: " + price + ")", Toast.LENGTH_SHORT).show();
+
+                    // Refresh the product list
+                    viewProducts();
+
+                } catch (NumberFormatException e) {
+                    Toast.makeText(MainActivity.this, "Please enter a valid price", Toast.LENGTH_SHORT).show();
+                }
             }
         });
 

@@ -52,13 +52,52 @@ public class MyDBHandler extends SQLiteOpenHelper {
         db.close();
     }
 
-    public void deleteProduct (Product product) {
+    public void deleteProduct(String name, double price) {
         SQLiteDatabase db = this.getWritableDatabase();
-        db.delete(TABLE_NAME, COLUMN_PRODUCT_NAME + " = ?", new String[]{product.getProductName()});
+        db.delete(TABLE_NAME,
+                COLUMN_PRODUCT_NAME + " = ? AND " + COLUMN_PRODUCT_PRICE + " = ?",
+                new String[]{name, String.valueOf(price)});
         db.close();
     }
 
-    public Product findProduct (String name) {
+    public Product findProduct(String name, double price) {
         SQLiteDatabase db = this.getReadableDatabase();
+
+        String query;
+        String[] selectionArgs;
+
+        if (!name.isEmpty() && price >= 0) {
+            // Search by both name and price
+            query = "SELECT * FROM " + TABLE_NAME + " WHERE " + COLUMN_PRODUCT_NAME + " = ? AND " + COLUMN_PRODUCT_PRICE + " = ?";
+            selectionArgs = new String[]{name, String.valueOf(price)};
+        } else if (!name.isEmpty()) {
+            // Search by name only
+            query = "SELECT * FROM " + TABLE_NAME + " WHERE " + COLUMN_PRODUCT_NAME + " = ?";
+            selectionArgs = new String[]{name};
+        } else if (price >= 0) {
+            // Search by price only
+            query = "SELECT * FROM " + TABLE_NAME + " WHERE " + COLUMN_PRODUCT_PRICE + " = ?";
+            selectionArgs = new String[]{String.valueOf(price)};
+        } else {
+            // No search criteria provided
+            db.close();
+            return null;
+        }
+
+        Cursor cursor = db.rawQuery(query, selectionArgs);
+        Product product = new Product();
+
+        if (cursor.moveToFirst()) {
+            product.setId(cursor.getInt(0));
+            product.setProductName(cursor.getString(1));
+            product.setProductPrice(cursor.getDouble(2));
+            cursor.close();
+            db.close();
+            return product;
+        } else {
+            cursor.close();
+            db.close();
+            return null; // Product not found
+        }
     }
 }
